@@ -1,0 +1,38 @@
+name: Update Homebrew Cask
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  update-cask:
+    runs-on: macos-latest
+    steps:
+      - name: Get latest release info
+        id: release
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const release = await github.rest.repos.getLatestRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            const version = release.data.tag_name.replace(/^v/, '');
+            const asset = release.data.assets.find(asset => asset.name.endsWith('.dmg'));
+            return { version, downloadUrl: asset.browser_download_url };
+          result-encoding: string
+
+      - name: Download DMG and calculate checksum
+        id: checksum
+        run: |
+          curl -L "${{ fromJSON(steps.release.outputs.result).downloadUrl }}" -o app.dmg
+          echo "sha256=$(shasum -a 256 app.dmg | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+
+      - name: Update Homebrew Cask
+        uses: Homebrew/actions/bump-cask-pr@master
+        with:
+          token: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
+          cask: sidekick-app
+          version: ${{ fromJSON(steps.release.outputs.result).version }}
+          sha256: ${{ steps.checksum.outputs.sha256 }}
