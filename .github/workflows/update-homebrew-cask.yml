@@ -30,7 +30,7 @@ jobs:
           echo "sha256=$(shasum -a 256 app.dmg | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
 
       - name: Update Homebrew Cask
-        uses: Homebrew/actions/bump-cask-pr@master
+        uses: Homebrew/homebrew-cask-action@master
         with:
           token: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
           cask: sidekick-app
